@@ -17,11 +17,11 @@
 
 (defun alt--ivy-on-hook (orig-fun &rest args)
   (when (alt--is-open)
-    (process-send-string alt-conn "in\n")))
+    (process-send-string alt-conn "ivy:on\n")))
 
 (defun alt--ivy-off-hook ()
   (when (alt--is-open)
-    (process-send-string alt-conn "out\n")))
+    (process-send-string alt-conn "ivy:off\n")))
 
 ;; add the hooks
 (advice-add 'ivy-read :before #'alt--ivy-on-hook)

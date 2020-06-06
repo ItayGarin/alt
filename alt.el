@@ -20,7 +20,8 @@
     (process-send-string alt-conn "in\n")))
 
 (defun alt--ivy-off-hook ()
-  (when (alt--is-open)(process-send-string alt-conn "out\n")))
+  (when (alt--is-open)
+    (process-send-string alt-conn "out\n")))
 
 ;; add the hooks
 (advice-add 'ivy-read :before #'alt--ivy-on-hook)

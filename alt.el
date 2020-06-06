@@ -30,3 +30,21 @@
 ;; remove the hooks
 (advice-remove 'ivy-read #'alt--ivy-on-hook)
 (advice-remove 'ivy--cleanup #'alt--ivy-off-hook)
+
+;; -------------------------------------
+;;
+;; Here's how to hook evil modes -
+;;
+;; (defun my/enter-insert-state-hook()
+;;   (interactive)
+;;   (shell-command (concat "issw " issw_default_lang_source)))
+;;
+;; (defun my/exit-insert-state-hook()
+;;   (interactive)
+;;   (setq issw_default_lang_source (shell-command-to-string "issw"))
+;;   (shell-command "issw com.apple.keylayout.US"))
+;;
+;; (add-hook 'evil-insert-state-entry-hook 'my/enter-insert-state-hook)
+;; (add-hook 'evil-insert-state-exit-hook  'my/exit-insert-state-hook)
+;; (add-hook 'evil-replace-state-entry-hook 'my/enter-insert-state-hook)
+;; (add-hook 'evil-replace-state-exit-hook  'my/exit-insert-state-hook)

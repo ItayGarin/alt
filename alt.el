@@ -12,7 +12,7 @@
 ;; Here's how to kill it
 ;; (process-send-eof alt-conn)
 
-(defun alt--is-open ()
+(defun alt--is-open-p ()
   (eq 'open (process-status alt-conn)))
 
 (defun alt--ivy-on-hook (orig-fun &rest args)

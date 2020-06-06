@@ -15,36 +15,39 @@
 (defun alt--is-open-p ()
   (eq 'open (process-status alt-conn)))
 
-(defun alt--ivy-on-hook (orig-fun &rest args)
+(defun alt--send-event (event)
   (when (alt--is-open)
-    (process-send-string alt-conn "ivy:on\n")))
+    (process-send-string alt-conn (concat event "\n"))))
+
+(defun alt--send-event-on (event)
+  (alt--send-event (concat event ":on")))
+
+(defun alt--send-event-off (event)
+  (alt--send-event (concat event ":off")))
+
+;; ---------------------------------------
+
+(defun alt--ivy-on-hook (orig-fun &rest args)
+  (alt--send-event-on "ivy"))
 
 (defun alt--ivy-off-hook ()
-  (when (alt--is-open)
-    (process-send-string alt-conn "ivy:off\n")))
-
-;; add the hooks
-(advice-add 'ivy-read :before #'alt--ivy-on-hook)
-(advice-add 'ivy--cleanup :after #'alt--ivy-off-hook)
+  (alt--send-event-off "ivy"))
 
 ;; remove the hooks
-(advice-remove 'ivy-read #'alt--ivy-on-hook)
-(advice-remove 'ivy--cleanup #'alt--ivy-off-hook)
+(advice-remove 'ivy-read 'alt--ivy-on-hook)
+(advice-remove 'ivy--cleanup 'alt--ivy-off-hook)
+
+;; add the hooks
+(advice-add 'ivy-read :before 'alt--ivy-on-hook)
+(advice-add 'ivy--cleanup :after 'alt--ivy-off-hook)
 
 ;; -------------------------------------
-;;
-;; Here's how to hook evil modes -
-;;
-;; (defun my/enter-insert-state-hook()
-;;   (interactive)
-;;   (shell-command (concat "issw " issw_default_lang_source)))
-;;
-;; (defun my/exit-insert-state-hook()
-;;   (interactive)
-;;   (setq issw_default_lang_source (shell-command-to-string "issw"))
-;;   (shell-command "issw com.apple.keylayout.US"))
-;;
-;; (add-hook 'evil-insert-state-entry-hook 'my/enter-insert-state-hook)
-;; (add-hook 'evil-insert-state-exit-hook  'my/exit-insert-state-hook)
-;; (add-hook 'evil-replace-state-entry-hook 'my/enter-insert-state-hook)
-;; (add-hook 'evil-replace-state-exit-hook  'my/exit-insert-state-hook)
+
+(defun alt--evil-insert-on ()
+  (alt--send-event-on "evil-insert"))
+
+(defun alt--evil-insert-off ()
+  (alt--send-event-off "evil-insert"))
+
+(add-hook 'evil-insert-state-entry-hook 'alt--evil-insert-on)
+(add-hook 'evil-insert-state-exit-hook  'alt--evil-insert-off)

@@ -49,5 +49,8 @@
 (defun alt--evil-insert-off ()
   (alt--send-event-off "evil-insert"))
 
+(remove-hook 'evil-insert-state-entry-hook 'alt--evil-insert-on)
+(remove-hook 'evil-insert-state-exit-hook  'alt--evil-insert-off)
+
 (add-hook 'evil-insert-state-entry-hook 'alt--evil-insert-on)
 (add-hook 'evil-insert-state-exit-hook  'alt--evil-insert-off)

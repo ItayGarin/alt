@@ -1,14 +1,14 @@
-use tokio::io::AsyncReadExt;
-use tokio::net::TcpListener;
-use tokio::net::TcpStream;
 use std::io;
 use std::net::Ipv4Addr;
 use std::net::SocketAddrV4;
+use tokio::io::AsyncReadExt;
+use tokio::net::TcpListener;
+use tokio::net::TcpStream;
 // use tokio::prelude::*;
 
 pub enum EvState {
     On,
-    Off
+    Off,
 }
 
 impl EvState {
@@ -16,21 +16,24 @@ impl EvState {
         match string {
             "on" => Ok(EvState::On),
             "off" => Ok(EvState::Off),
-            _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "Bad event state (should on/off)")),
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Bad event state (should on/off)",
+            )),
         }
     }
 }
 
 async fn handle_buf(buf: &[u8]) -> Result<(), io::Error> {
-    let str_buf = std::str::from_utf8(buf)
-        .expect("Failed to convert a packet into a string");
+    let str_buf = std::str::from_utf8(buf).expect("Failed to convert a packet into a string");
 
-    let split: Vec<&str> =
-        str_buf.split(":")
-        .collect();
+    let split: Vec<&str> = str_buf.split(":").collect();
 
     if split.len() != 2 {
-        let err = io::Error::new(io::ErrorKind::InvalidInput, "Bad event (should be <name>:<on/off>)");
+        let err = io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Bad event (should be <name>:<on/off>)",
+        );
         return Err(err);
     }
 
@@ -52,7 +55,7 @@ async fn handle_conn(mut conn: TcpStream) {
             Ok(n) => handle_buf(&buf[0..n]).await,
             Err(e) => {
                 eprintln!("failed to read from socket; err = {:?}", e);
-                return
+                return;
             }
         };
 

@@ -2,10 +2,12 @@ use std::io;
 use std::net::Ipv4Addr;
 use std::net::SocketAddrV4;
 use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 // use tokio::prelude::*;
 
+#[derive(Copy, Clone, Debug)]
 pub enum EvState {
     On,
     Off,
@@ -24,21 +26,20 @@ impl EvState {
     }
 }
 
-async fn handle_buf(buf: &[u8]) -> Result<(), io::Error> {
-    let str_buf = std::str::from_utf8(buf).expect("Failed to convert a packet into a string");
-
+async fn handle_buf(buf: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    let str_buf = std::str::from_utf8(buf)?;
     let split: Vec<&str> = str_buf.split(":").collect();
 
     if split.len() != 2 {
-        let err = io::Error::new(
+        let err = Box::new(io::Error::new(
             io::ErrorKind::InvalidInput,
             "Bad event (should be <name>:<on/off>)",
-        );
+        ));
         return Err(err);
     }
 
     let event = split[0].trim().to_owned();
-    let state = split[1].trim().to_owned();
+    let state = EvState::from_str(split[1].trim())?;
 
     dbg!((event, state));
     Ok(())
@@ -49,21 +50,35 @@ async fn handle_conn(mut conn: TcpStream) {
 
     // In a loop, read data from the socket and write the data back.
     loop {
-        match conn.read(&mut buf).await {
+        let is_ok = match conn.read(&mut buf).await {
             // socket closed
-            Ok(n) if n == 0 => return,
-            Ok(n) => handle_buf(&buf[0..n]).await,
+            Ok(n) if n == 0 => {
+                println!("Client exited");
+                return;
+            },
+            Ok(n) => {
+                if let Err(e) = handle_buf(&buf[0..n]).await {
+                    eprintln!("client encountered an error; err = {:?}", &e);
+                    false
+                } else {
+                    true
+                }
+            }
             Err(e) => {
                 eprintln!("failed to read from socket; err = {:?}", e);
-                return;
+                false
             }
         };
 
-        // // Write the data back
-        // if let Err(e) = conn.write_all(&buf[0..n]).await {
-        //     eprintln!("failed to write to socket; err = {:?}", e);
-        //     return
-        // }
+        let reply: &[u8] = match is_ok {
+            true => b"OK\n",
+            _ => b"ERROR\n",
+        };
+
+        if let Err(e) = conn.write_all(reply).await {
+            eprintln!("Failed to send a reply; err = {:?}", e);
+            return;
+        }
     }
 }
 

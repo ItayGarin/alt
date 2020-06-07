@@ -2,9 +2,9 @@
 (setq alt-conn
       (open-network-stream
        "alt-conn"
-       "alt-conn"
+       "*alt-conn*"
        "127.0.0.1"
-       7331))
+       7332))
 
 ;; Here's how to send a message
 ;; (process-send-string alt-conn "hello world\n")
@@ -16,7 +16,7 @@
   (eq 'open (process-status alt-conn)))
 
 (defun alt--send-event (event)
-  (when (alt--is-open)
+  (when (alt--is-open-p)
     (process-send-string alt-conn (concat event "\n"))))
 
 (defun alt--send-event-on (event)

@@ -26,6 +26,16 @@ impl EvState {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct Event<'a> {
+    name: &'a str,
+    state: EvState,
+}
+
+async fn handle_event(event: Event<'_>) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
 async fn handle_buf(buf: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
     let str_buf = std::str::from_utf8(buf)?;
     let split: Vec<&str> = str_buf.split(":").collect();
@@ -38,11 +48,12 @@ async fn handle_buf(buf: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
         return Err(err);
     }
 
-    let event = split[0].trim().to_owned();
+    let name = split[0].trim();
     let state = EvState::from_str(split[1].trim())?;
+    let event = Event{name, state};
 
-    dbg!((event, state));
-    Ok(())
+    dbg!(&event);
+    handle_event(event).await
 }
 
 async fn handle_conn(mut conn: TcpStream) {

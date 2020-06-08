@@ -8,6 +8,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 // use tokio::prelude::*;
 
+use crate::error::DynError;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
@@ -41,13 +42,10 @@ pub struct AltServer {
 }
 
 type ArcAltServer = Arc<Mutex<AltServer>>;
-pub type DynError = Box<dyn std::error::Error>;
 
 impl AltServer {
     pub async fn new(tx: mpsc::Sender<String>) -> Result<Self, DynError> {
-        Ok(AltServer {
-            tx,
-        })
+        Ok(Self { tx })
     }
 
     pub async fn init_listen_socket() -> Result<TcpListener, DynError> {
@@ -56,11 +54,14 @@ impl AltServer {
         Ok(listen_socket)
     }
 
-    async fn handle_ivy(server: &ArcAltServer, event: Event<'_>) -> Result<(), DynError> {
+    async fn handle_ivy(server: &mut ArcAltServer, _event: Event<'_>) -> Result<(), DynError> {
+        let mut server = server.lock().await;
+        let event = "IpcDoEffect((fx: ToggleLayerAlias(\"ivy\"), val: Press))".to_string();
+        server.tx.send(event).await?;
         Ok(())
     }
 
-    async fn handle_event(server: &ArcAltServer, event: Event<'_>) -> Result<(), DynError> {
+    async fn handle_event(server: &mut ArcAltServer, event: Event<'_>) -> Result<(), DynError> {
         match event.name {
             "ivy" => {
                 Self::handle_ivy(server, event).await?;
@@ -72,7 +73,7 @@ impl AltServer {
         Ok(())
     }
 
-    async fn handle_buf(server: &ArcAltServer, buf: &[u8]) -> Result<(), DynError> {
+    async fn handle_buf(server: &mut ArcAltServer, buf: &[u8]) -> Result<(), DynError> {
         let str_buf = std::str::from_utf8(buf)?;
         let split: Vec<&str> = str_buf.split(":").collect();
 
@@ -92,7 +93,7 @@ impl AltServer {
         Self::handle_event(server, event).await
     }
 
-    async fn handle_conn(server: &ArcAltServer, mut conn: TcpStream) {
+    async fn handle_conn(mut server: &mut ArcAltServer, mut conn: TcpStream) {
         let mut buf: [u8; 1024] = [0; 1024];
 
         // In a loop, read data from the socket and write the data back.
@@ -104,7 +105,7 @@ impl AltServer {
                     return;
                 }
                 Ok(n) => {
-                    let res = Self::handle_buf(&server, &buf[0..n]).await;
+                    let res = Self::handle_buf(&mut server, &buf[0..n]).await;
                     if let Err(e) = res {
                         eprintln!("client encountered an error; err = {:?}", &e);
                         false
@@ -132,13 +133,13 @@ impl AltServer {
 
     pub async fn event_loop(self) -> Result<(), DynError> {
         let mut listen_socket = Self::init_listen_socket().await?;
-        let arc_alt = Arc::new(Mutex::new(self));
+        let arc_server = Arc::new(Mutex::new(self));
         loop {
             let (socket, _) = listen_socket.accept().await?;
-            let arc_clone = arc_alt.clone();
+            let mut arc_clone = arc_server.clone();
             tokio::spawn(async move {
                 println!("A new client connected");
-                Self::handle_conn(&arc_clone, socket).await;
+                Self::handle_conn(&mut arc_clone, socket).await;
             });
         }
     }

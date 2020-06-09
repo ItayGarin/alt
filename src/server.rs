@@ -54,11 +54,19 @@ impl AltServer {
         Ok(listen_socket)
     }
 
-    async fn handle_ivy(server: &mut ArcAltServer, _event: Event<'_>) -> Result<(), DynError> {
+    async fn send_effect(server: &mut ArcAltServer, effect: &str) -> Result<(), DynError> {
         let mut server = server.lock().await;
-        let event = "IpcDoEffect((fx: ToggleLayerAlias(\"ivy\"), val: Press))".to_string();
+        let event = format!("IpcDoEffect((fx: {}, val: Press))", effect).to_string();
         server.tx.send(event).await?;
         Ok(())
+    }
+
+    async fn handle_ivy(server: &mut ArcAltServer, event: Event<'_>) -> Result<(), DynError> {
+        let effect = match event.state {
+            EvState::On => "TurnOnLayerAlias(\"ivy\")",
+            EvState::Off => "TurnOffLayerAlias(\"ivy\")"
+        };
+        Self::send_effect(server, effect).await
     }
 
     async fn handle_event(server: &mut ArcAltServer, event: Event<'_>) -> Result<(), DynError> {

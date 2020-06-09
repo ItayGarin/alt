@@ -71,14 +71,9 @@ impl AltServer {
 
     async fn handle_event(server: &mut ArcAltServer, event: Event<'_>) -> Result<(), DynError> {
         match event.name {
-            "ivy" => {
-                Self::handle_ivy(server, event).await?;
-                ()
-            }
-            _ => (),
+            "ivy" => Self::handle_ivy(server, event).await,
+            _ => Ok(()),
         }
-
-        Ok(())
     }
 
     async fn handle_buf(server: &mut ArcAltServer, buf: &[u8]) -> Result<(), DynError> {

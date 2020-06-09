@@ -6,8 +6,7 @@
        "127.0.0.1"
        7332))
 
-;; Here's how to send a message
-;; (process-send-string alt-conn "hello world\n")
+(set-process-query-on-exit-flag alt-conn nil)
 
 ;; Here's how to kill it
 ;; (process-send-eof alt-conn)

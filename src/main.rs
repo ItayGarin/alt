@@ -1,6 +1,7 @@
 mod error;
 mod ktrl_client;
 mod server;
+mod i3_focus;
 
 use error::DynError;
 use ktrl_client::KtrlClient;

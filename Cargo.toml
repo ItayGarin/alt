@@ -5,7 +5,7 @@ authors = ["Itay Garin <thifixp@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-i3ipc = "0.10.1"
+tokio-i3ipc = "0.8.0"
 tokio = { version = "0.2.21", features = ["rt-threaded", "sync", "io-util", "macros", "tcp"] }
 tmq = "0.2.1"
 futures = "0.3.5"

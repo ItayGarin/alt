@@ -12,30 +12,7 @@ use crate::error::DynError;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
-#[derive(Copy, Clone, Debug)]
-pub enum EvState {
-    On,
-    Off,
-}
-
-impl EvState {
-    pub fn from_str(string: &str) -> Result<Self, io::Error> {
-        match string {
-            "on" => Ok(EvState::On),
-            "off" => Ok(EvState::Off),
-            _ => Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Bad event state (should on/off)",
-            )),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Event<'a> {
-    name: &'a str,
-    state: EvState,
-}
+use crate::events::{ExtEvent, ExtEventState};
 
 pub struct EvGateway {
     tx: mpsc::Sender<String>,
@@ -48,7 +25,7 @@ impl EvGateway {
         Ok(Self { tx })
     }
 
-    pub async fn init_listen_socket() -> Result<TcpListener, DynError> {
+    async fn init_listen_socket() -> Result<TcpListener, DynError> {
         let endpoint = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7332);
         let listen_socket = TcpListener::bind(endpoint).await?;
         Ok(listen_socket)
@@ -61,16 +38,16 @@ impl EvGateway {
         Ok(())
     }
 
-    async fn handle_ivy(gateway: &mut ArcEvGateway, event: Event<'_>) -> Result<(), DynError> {
+    async fn handle_ivy(gateway: &mut ArcEvGateway, event: ExtEvent) -> Result<(), DynError> {
         let effect = match event.state {
-            EvState::On => "TurnOnLayerAlias(\"ivy\")",
-            EvState::Off => "TurnOffLayerAlias(\"ivy\")"
+            ExtEventState::On => "TurnOnLayerAlias(\"ivy\")",
+            ExtEventState::Off => "TurnOffLayerAlias(\"ivy\")"
         };
         Self::send_effect(gateway, effect).await
     }
 
-    async fn handle_event(gateway: &mut ArcEvGateway, event: Event<'_>) -> Result<(), DynError> {
-        match event.name {
+    async fn handle_event(gateway: &mut ArcEvGateway, event: ExtEvent) -> Result<(), DynError> {
+        match event.name.as_ref() {
             "ivy" => Self::handle_ivy(gateway, event).await,
             _ => Ok(()),
         }
@@ -88,9 +65,9 @@ impl EvGateway {
             return Err(err);
         }
 
-        let name = split[0].trim();
-        let state = EvState::from_str(split[1].trim())?;
-        let event = Event { name, state };
+        let name = split[0].trim().to_string();
+        let state = ExtEventState::from_str(split[1].trim())?;
+        let event = ExtEvent { name, state };
 
         dbg!(&event);
         Self::handle_event(gateway, event).await

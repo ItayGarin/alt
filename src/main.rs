@@ -2,6 +2,7 @@ mod error;
 mod ktrl_client;
 mod gateway;
 mod i3_focus;
+mod events;
 
 use error::DynError;
 use ktrl_client::KtrlClient;

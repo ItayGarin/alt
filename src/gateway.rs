@@ -37,13 +37,13 @@ pub struct Event<'a> {
     state: EvState,
 }
 
-pub struct AltServer {
+pub struct EvGateway {
     tx: mpsc::Sender<String>,
 }
 
-type ArcAltServer = Arc<Mutex<AltServer>>;
+type ArcEvGateway = Arc<Mutex<EvGateway>>;
 
-impl AltServer {
+impl EvGateway {
     pub async fn new(tx: mpsc::Sender<String>) -> Result<Self, DynError> {
         Ok(Self { tx })
     }
@@ -54,29 +54,29 @@ impl AltServer {
         Ok(listen_socket)
     }
 
-    async fn send_effect(server: &mut ArcAltServer, effect: &str) -> Result<(), DynError> {
-        let mut server = server.lock().await;
+    async fn send_effect(gateway: &mut ArcEvGateway, effect: &str) -> Result<(), DynError> {
+        let mut gateway = gateway.lock().await;
         let event = format!("IpcDoEffect((fx: {}, val: Press))", effect).to_string();
-        server.tx.send(event).await?;
+        gateway.tx.send(event).await?;
         Ok(())
     }
 
-    async fn handle_ivy(server: &mut ArcAltServer, event: Event<'_>) -> Result<(), DynError> {
+    async fn handle_ivy(gateway: &mut ArcEvGateway, event: Event<'_>) -> Result<(), DynError> {
         let effect = match event.state {
             EvState::On => "TurnOnLayerAlias(\"ivy\")",
             EvState::Off => "TurnOffLayerAlias(\"ivy\")"
         };
-        Self::send_effect(server, effect).await
+        Self::send_effect(gateway, effect).await
     }
 
-    async fn handle_event(server: &mut ArcAltServer, event: Event<'_>) -> Result<(), DynError> {
+    async fn handle_event(gateway: &mut ArcEvGateway, event: Event<'_>) -> Result<(), DynError> {
         match event.name {
-            "ivy" => Self::handle_ivy(server, event).await,
+            "ivy" => Self::handle_ivy(gateway, event).await,
             _ => Ok(()),
         }
     }
 
-    async fn handle_buf(server: &mut ArcAltServer, buf: &[u8]) -> Result<(), DynError> {
+    async fn handle_buf(gateway: &mut ArcEvGateway, buf: &[u8]) -> Result<(), DynError> {
         let str_buf = std::str::from_utf8(buf)?;
         let split: Vec<&str> = str_buf.split(":").collect();
 
@@ -93,10 +93,10 @@ impl AltServer {
         let event = Event { name, state };
 
         dbg!(&event);
-        Self::handle_event(server, event).await
+        Self::handle_event(gateway, event).await
     }
 
-    async fn handle_conn(mut server: &mut ArcAltServer, mut conn: TcpStream) {
+    async fn handle_conn(mut gateway: &mut ArcEvGateway, mut conn: TcpStream) {
         let mut buf: [u8; 1024] = [0; 1024];
 
         // In a loop, read data from the socket and write the data back.
@@ -108,7 +108,7 @@ impl AltServer {
                     return;
                 }
                 Ok(n) => {
-                    let res = Self::handle_buf(&mut server, &buf[0..n]).await;
+                    let res = Self::handle_buf(&mut gateway, &buf[0..n]).await;
                     if let Err(e) = res {
                         eprintln!("client encountered an error; err = {:?}", &e);
                         false
@@ -136,10 +136,10 @@ impl AltServer {
 
     pub async fn event_loop(self) -> Result<(), DynError> {
         let mut listen_socket = Self::init_listen_socket().await?;
-        let arc_server = Arc::new(Mutex::new(self));
+        let arc_gateway = Arc::new(Mutex::new(self));
         loop {
             let (socket, _) = listen_socket.accept().await?;
-            let mut arc_clone = arc_server.clone();
+            let mut arc_clone = arc_gateway.clone();
             tokio::spawn(async move {
                 println!("A new client connected");
                 Self::handle_conn(&mut arc_clone, socket).await;

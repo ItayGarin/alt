@@ -1,11 +1,11 @@
 mod error;
 mod ktrl_client;
-mod server;
+mod gateway;
 mod i3_focus;
 
 use error::DynError;
 use ktrl_client::KtrlClient;
-use server::AltServer;
+use gateway::EvGateway;
 use i3_focus::I3FocusListener;
 
 use tokio::sync::mpsc;
@@ -18,18 +18,18 @@ async fn main() -> Result<(), DynError> {
     let (focus_tx, focus_rx) = watch::channel("".to_string());
     let i3listener = I3FocusListener::new(focus_tx);
 
-    let (server_tx, server_rx) = mpsc::channel(1);
-    let server = AltServer::new(server_tx).await?;
-    let client = KtrlClient::new(server_rx).await?;
+    let (gateway_tx, gateway_rx) = mpsc::channel(1);
+    let gateway = EvGateway::new(gateway_tx).await?;
+    let client = KtrlClient::new(gateway_rx).await?;
 
-    let (server_result, client_res, i3_res) =
+    let (gateway_result, client_res, i3_res) =
         tokio::join!(
-            server.event_loop(),
+            gateway.event_loop(),
             client.event_loop(),
             i3listener.event_loop(),
         );
 
-    server_result?;
+    gateway_result?;
     client_res?;
     i3_res?;
 

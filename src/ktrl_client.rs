@@ -1,12 +1,14 @@
 use crate::error::DynError;
 use tokio::sync::mpsc;
 
+pub type KtrlIpcReq = String;
+
 pub struct KtrlClient {
-    rx: mpsc::Receiver<String>,
+    rx: mpsc::Receiver<KtrlIpcReq>,
 }
 
 impl KtrlClient {
-    pub async fn new(rx: mpsc::Receiver<String>) -> Result<Self, DynError> {
+    pub async fn new(rx: mpsc::Receiver<KtrlIpcReq>) -> Result<Self, DynError> {
         Ok(Self { rx })
     }
 

@@ -6,22 +6,20 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
-// use tokio::prelude::*;
+use tokio::sync::mpsc::Sender;
+use std::sync::Arc;
 
 use crate::error::DynError;
-use std::sync::Arc;
-use tokio::sync::mpsc;
-
-use crate::events::{ExtEvent, ExtEventState};
+use crate::events::*;
 
 pub struct EvGateway {
-    tx: mpsc::Sender<String>,
+    tx: Sender<AltEvent>,
 }
 
 type ArcEvGateway = Arc<Mutex<EvGateway>>;
 
 impl EvGateway {
-    pub async fn new(tx: mpsc::Sender<String>) -> Result<Self, DynError> {
+    pub async fn new(tx: Sender<AltEvent>) -> Result<Self, DynError> {
         Ok(Self { tx })
     }
 
@@ -31,26 +29,11 @@ impl EvGateway {
         Ok(listen_socket)
     }
 
-    async fn send_effect(gateway: &mut ArcEvGateway, effect: &str) -> Result<(), DynError> {
+    async fn handle_event(gateway: &mut ArcEvGateway, event: ExtEvent) -> Result<(), DynError> {
         let mut gateway = gateway.lock().await;
-        let event = format!("IpcDoEffect((fx: {}, val: Press))", effect).to_string();
+        let event = AltEvent::AltExtEvent(event);
         gateway.tx.send(event).await?;
         Ok(())
-    }
-
-    async fn handle_ivy(gateway: &mut ArcEvGateway, event: ExtEvent) -> Result<(), DynError> {
-        let effect = match event.state {
-            ExtEventState::On => "TurnOnLayerAlias(\"ivy\")",
-            ExtEventState::Off => "TurnOffLayerAlias(\"ivy\")"
-        };
-        Self::send_effect(gateway, effect).await
-    }
-
-    async fn handle_event(gateway: &mut ArcEvGateway, event: ExtEvent) -> Result<(), DynError> {
-        match event.name.as_ref() {
-            "ivy" => Self::handle_ivy(gateway, event).await,
-            _ => Ok(()),
-        }
     }
 
     async fn handle_buf(gateway: &mut ArcEvGateway, buf: &[u8]) -> Result<(), DynError> {

@@ -1,18 +1,20 @@
 use tokio_i3ipc::{event::{Event,Subscribe, WindowData, WindowChange}, I3};
 use tokio::stream::StreamExt;
-use tokio::sync::watch;
+use tokio::sync::mpsc::Sender;
+
 use crate::error::DynError;
+use crate::events::*;
 
 pub struct I3FocusListener {
-    tx: watch::Sender<String>,
+    tx: Sender<AltEvent>,
 }
 
 impl I3FocusListener {
-    pub fn new(tx: watch::Sender<String>) -> Self {
+    pub fn new(tx: Sender<AltEvent>) -> Self {
         Self{tx}
     }
 
-    async fn handle_window_event(&self, data: Box<WindowData>) -> Result<(), DynError> {
+    async fn handle_window_event(&mut self, data: Box<WindowData>) -> Result<(), DynError> {
         if let WindowChange::Focus = data.change {
             let window = match data.container.name {
                 Some(name) => name,
@@ -23,13 +25,14 @@ impl I3FocusListener {
             };
 
             println!("Focus: {}", window);
-            self.tx.broadcast(window)?;
+            let focus_event = AltEvent::AltFocusEvent(FocusEvent{window});
+            self.tx.send(focus_event).await?;
         }
 
         Ok(())
     }
 
-    pub async fn event_loop(&self) -> Result<(), DynError> {
+    pub async fn event_loop(&mut self) -> Result<(), DynError> {
         let mut i3 = I3::connect().await?;
         i3.subscribe([Subscribe::Window]).await?;
 
@@ -42,10 +45,5 @@ impl I3FocusListener {
         }
 
         Ok(())
-    }
-
-    pub async fn get_focused(rx: &mut watch::Receiver<String>) -> String {
-        rx.recv().await
-            .expect("i3FocusListener unexpectedly quit")
     }
 }

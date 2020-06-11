@@ -29,7 +29,10 @@ impl EvAggregator {
     //     Self::send_effect(gateway, effect).await
     // }
 
-    pub async fn event_loop(&self) -> Result<(), DynError> {
-        Ok(())
+    pub async fn event_loop(&mut self) -> Result<(), DynError> {
+        loop {
+            let event = self.rx.recv().await;
+            dbg!(event);
+        }
     }
 }

@@ -23,7 +23,7 @@ async fn main() -> Result<(), DynError> {
 
     let gateway = EvGateway::new(agg_tx.clone()).await?;
     let mut i3listener = I3FocusListener::new(agg_tx);
-    let aggregator = EvAggregator::new(ktrl_tx, agg_rx);
+    let mut aggregator = EvAggregator::new(ktrl_tx, agg_rx);
     let client = KtrlClient::new(ktrl_rx).await?;
 
     let (gateway_result, i3_res, agg_res, client_res) =

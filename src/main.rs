@@ -18,8 +18,8 @@ use tokio::sync::mpsc;
 async fn main() -> Result<(), DynError> {
     println!("ALT: Started");
 
-    let (mut agg_tx, agg_rx) = mpsc::channel(1);
-    let (mut ktrl_tx, ktrl_rx) = mpsc::channel(1);
+    let (agg_tx, agg_rx) = mpsc::channel(1);
+    let (ktrl_tx, ktrl_rx) = mpsc::channel(1);
 
     let gateway = EvGateway::new(agg_tx.clone()).await?;
     let mut i3listener = I3FocusListener::new(agg_tx);
@@ -35,8 +35,9 @@ async fn main() -> Result<(), DynError> {
         );
 
     gateway_result?;
-    client_res?;
     i3_res?;
+    agg_res?;
+    client_res?;
 
     Ok(())
 }

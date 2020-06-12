@@ -18,13 +18,10 @@ impl I3FocusListener {
         if let WindowChange::Focus = data.change {
             let window = match data.container.name {
                 Some(name) => name,
-                _ => {
-                    println!("empty window focused");
-                    return Ok(())
-                },
+                _ => return Ok(())
+,
             };
 
-            println!("Focus: {}", window);
             let focus_event = AltEvent::AltFocusEvent(FocusEvent{window});
             self.tx.send(focus_event).await?;
         }

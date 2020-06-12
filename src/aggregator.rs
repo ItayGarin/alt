@@ -15,6 +15,7 @@ enum Requirement {
 
 use Requirement::*;
 
+#[derive(Debug)]
 struct AndAgg {
     /// readonly: outlines the requirement for this aggregator
     cfg: HashSet<Requirement>,
@@ -71,14 +72,13 @@ impl EvAggregator {
         Self{tx, rx, aggs}
     }
 
-    async fn send_ipc(&mut self, req: KtrlIpcReq) -> Result<(), DynError> {
-        self.tx.send(req).await?;
+    async fn send_effect(&mut self, req: KtrlIpcReq) -> Result<(), DynError> {
+        let effect = format!("IpcDoEffect((fx: {}, val: Press))", req);
+        self.tx.send(effect).await?;
         Ok(())
     }
 
     async fn handle_event(&mut self, event: AltEvent) -> Result<(), DynError> {
-        dbg!(&event);
-
         for agg in &mut self.aggs {
             for requirement in &agg.cfg {
                 match (requirement, &event) {
@@ -108,17 +108,22 @@ impl EvAggregator {
             }
         }
 
+        let mut ipc_reqs: Vec<KtrlIpcReq> = vec![];
         for agg in &mut self.aggs {
             let is_on = agg.is_on();
 
-            let is_changed = agg.state == is_on;
+            let is_changed = agg.state != is_on;
             if is_changed && is_on {
-                self.send_ipc(agg.on_ipc.clone()).await?;
-            } else if is_changed && is_on {
-                self.send_ipc(agg.off_ipc.clone()).await?;
+                ipc_reqs.push(agg.on_ipc.clone());
+            } else if is_changed && !is_on {
+                ipc_reqs.push(agg.off_ipc.clone());
             }
 
             agg.state = is_on;
+        }
+
+        for req in ipc_reqs {
+            self.send_effect(req).await?;
         }
 
         Ok(())

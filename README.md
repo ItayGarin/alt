@@ -41,7 +41,7 @@ exec ~/.cargo/bin/alt
 
 ## Configuration
 
-The default config file path is "~/.alt.ron". 
+The default config file path is `~/.alt.ron`. 
 You can override this with the `--cfg` cli argument.
 
 ### Example

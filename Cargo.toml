@@ -2,6 +2,14 @@
 name = "alt"
 version = "0.1.0"
 authors = ["Itay Garin <thifixp@gmail.com>"]
+description = "An Event Aggregator for ktrl"
+categories = ["command-line-utilities"]
+keywords = ["cli", "linux", "daemon", "keyboard", "layout"]
+homepage = "https://https://github.com/ItayGarin/alt"
+repository = "https://https://github.com/ItayGarin/alt"
+documentation = "https://https://github.com/ItayGarin/alt"
+readme = "README.md"
+license = "GPL-3.0"
 edition = "2018"
 
 [dependencies]

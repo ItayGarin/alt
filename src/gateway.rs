@@ -52,7 +52,6 @@ impl EvGateway {
         let state = ExtEventState::from_str(split[1].trim())?;
         let event = ExtEvent { name, state };
 
-        dbg!(&event);
         Self::handle_event(gateway, event).await
     }
 

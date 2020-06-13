@@ -14,9 +14,98 @@ use ktrl_client::KtrlClient;
 
 use tokio::sync::mpsc;
 
+use dirs::home_dir;
+use clap::{App, Arg};
+use log::info;
+use simplelog::*;
+use std::fs::File;
+use std::io::{Error, ErrorKind::*};
+use std::path::{Path, PathBuf};
+
+const DEFAULT_LOG_PATH: &str = ".alt.log";
+const DEFAULT_CFG_PATH: &str = ".alt";
+
+struct AltArgs {
+    config_path: PathBuf,
+}
+
+fn cli_init() -> Result<AltArgs, std::io::Error> {
+    let matches = App::new("alt")
+        .version("0.1")
+        .author("Itay G. <thifixp@gmail.com>")
+        .about("An Event Aggregator for ktrl")
+        .arg(
+            Arg::with_name("cfg")
+                .long("cfg")
+                .value_name("CONFIG")
+                .help(&format!(
+                    "Path to your alt config file. Default: {}",
+                    DEFAULT_CFG_PATH
+                ))
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("logfile")
+                .long("log")
+                .value_name("LOGFILE")
+                .help(&format!(
+                    "Path to the log file. Default: {}",
+                    DEFAULT_LOG_PATH
+                ))
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("debug")
+                .long("debug")
+                .help("Enables debug level logging"),
+        )
+        .get_matches();
+
+    let home_dir = home_dir().expect("Could not find your home directory");
+
+    let config_path = match matches.value_of("cfg") {
+        Some(path) => Path::new(path).to_owned(),
+        _ => home_dir.join(DEFAULT_CFG_PATH),
+    };
+
+    let log_path = match matches.value_of("logfile") {
+        Some(path) => Path::new(path).to_owned(),
+        _ => home_dir.join(DEFAULT_LOG_PATH),
+    };
+
+    let log_lvl = match matches.is_present("debug") {
+        true => LevelFilter::Debug,
+        _ => LevelFilter::Info,
+    };
+
+    CombinedLogger::init(vec![
+        TermLogger::new(log_lvl, Config::default(), TerminalMode::Mixed),
+        WriteLogger::new(
+            log_lvl,
+            Config::default(),
+            File::create(log_path).expect("Couldn't initialize the file logger"),
+        ),
+    ])
+    .expect("Couldn't initialize the logger");
+
+    if !config_path.exists() {
+        let err = format!(
+            "Could not find your config file ({})",
+            config_path.to_str().unwrap_or("?")
+        );
+        return Err(Error::new(NotFound, err));
+    }
+
+    Ok(
+        AltArgs{
+            config_path
+        })
+}
+
 #[tokio::main]
 async fn main() -> Result<(), DynError> {
-    println!("ALT: Started");
+    let args = cli_init()?;
+    info!("ALT: Started");
 
     let (agg_tx, agg_rx) = mpsc::channel(1);
     let (ktrl_tx, ktrl_rx) = mpsc::channel(1);

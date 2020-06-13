@@ -5,6 +5,10 @@ authors = ["Itay Garin <thifixp@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+clap = "2.33.1"
+log = "0.4.8"
+simplelog = "0.8.0"
+dirs = "2.0.2"
 tokio-i3ipc = "0.8.0"
 tokio = { version = "0.2.21", features = ["rt-threaded", "sync", "io-util", "macros", "tcp"] }
 tmq = "0.2.1"

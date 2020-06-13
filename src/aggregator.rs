@@ -68,7 +68,14 @@ impl EvAggregator {
             "TurnOffLayerAlias(\"ivy\")".to_string()
         );
 
-        let aggs = vec![ivy];
+        let chrome = AndAgg::new(
+            vec![RqFocus("chrome".to_string()),
+                 ].into_iter().collect(),
+            "TurnOnLayerAlias(\"caps\")".to_string(),
+            "TurnOffLayerAlias(\"caps\")".to_string()
+        );
+
+        let aggs = vec![ivy, chrome];
         Self{tx, rx, aggs}
     }
 

@@ -8,6 +8,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::Sender;
 use std::sync::Arc;
+use log::{info, error};
 
 use crate::error::DynError;
 use crate::events::*;
@@ -63,20 +64,20 @@ impl EvGateway {
             let is_ok = match conn.read(&mut buf).await {
                 // socket closed
                 Ok(n) if n == 0 => {
-                    println!("Client exited");
+                    info!("Client exited");
                     return;
                 }
                 Ok(n) => {
                     let res = Self::handle_buf(&mut gateway, &buf[0..n]).await;
                     if let Err(e) = res {
-                        eprintln!("client encountered an error; err = {:?}", &e);
+                        error!("client encountered an error; err = {:?}", &e);
                         false
                     } else {
                         true
                     }
                 }
                 Err(e) => {
-                    eprintln!("failed to read from socket; err = {:?}", e);
+                    error!("failed to read from socket; err = {:?}", e);
                     false
                 }
             };
@@ -87,7 +88,7 @@ impl EvGateway {
             };
 
             if let Err(e) = conn.write_all(reply).await {
-                eprintln!("Failed to send a reply; err = {:?}", e);
+                error!("Failed to send a reply; err = {:?}", e);
                 return;
             }
         }
@@ -100,7 +101,7 @@ impl EvGateway {
             let (socket, _) = listen_socket.accept().await?;
             let mut arc_clone = arc_gateway.clone();
             tokio::spawn(async move {
-                println!("A new client connected");
+                info!("A new client connected");
                 Self::handle_conn(&mut arc_clone, socket).await;
             });
         }

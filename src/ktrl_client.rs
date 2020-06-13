@@ -1,5 +1,6 @@
 use crate::error::DynError;
 use tokio::sync::mpsc;
+use log::info;
 
 pub type KtrlIpcReq = String;
 
@@ -15,7 +16,7 @@ impl KtrlClient {
     pub async fn event_loop(mut self) -> Result<(), DynError> {
         let context = tmq::Context::new();
         let mut ktrl_sender = tmq::request(&context).connect("tcp://127.0.0.1:7331")?;
-        println!("Connected to ktrl");
+        info!("Connected to ktrl");
 
         loop {
             let event = match self.rx.recv().await {
@@ -23,7 +24,7 @@ impl KtrlClient {
                 _ => return Ok(()),
             };
 
-            println!("Sending ktrl '{}'", event);
+            info!("Sending ktrl '{}'", event);
 
             let msg = tmq::Message::from(&event);
             let multipart = tmq::Multipart::from(msg);
@@ -32,7 +33,7 @@ impl KtrlClient {
             let (mut multi_reply, new_sender) = ktrl_receiver.recv().await?;
             let msg = multi_reply.pop_front().expect("Unexpected reply from ktrl");
             let msg_str = msg.as_str().expect("Failed to convert ktrl's reply to a string");
-            println!("KTRL: Replied '{}'", msg_str);
+            info!("KTRL: Replied '{}'", msg_str);
 
             ktrl_sender = new_sender;
         }

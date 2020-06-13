@@ -26,13 +26,14 @@ OPTIONS:
 
 ## Install
 
+- Install `alt`
+
 ```
 cargo install --path .
 ```
 
-Setup your `~/.alt.ron` file (See my example below).
-
-Add this to your window manager autostart (ex: i3) -
+- Setup your `~/.alt.ron` file (See my example below).
+- Add this to your window manager autostart (ex: i3) -
 
 ```
 exec ~/.cargo/bin/alt

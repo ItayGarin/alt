@@ -6,14 +6,7 @@ use crate::events::AltEvent;
 use crate::events::AltEvent::*;
 use crate::ktrl_client::KtrlIpcReq;
 use crate::error::DynError;
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-enum Requirement {
-    RqFocus(String),
-    RqExtEvent(String),
-}
-
-use Requirement::*;
+use crate::config::{AltCfg, Requirement, Requirement::*};
 
 #[derive(Debug)]
 struct AndAgg {
@@ -60,22 +53,14 @@ pub struct EvAggregator {
 }
 
 impl EvAggregator {
-    pub fn new(tx: Sender<KtrlIpcReq>, rx: Receiver<AltEvent>) -> Self {
-        let ivy = AndAgg::new(
-            vec![RqFocus("emacs".to_string()),
-                 RqExtEvent("ivy".to_string())].into_iter().collect(),
-            "TurnOnLayerAlias(\"ivy\")".to_string(),
-            "TurnOffLayerAlias(\"ivy\")".to_string()
-        );
+    pub fn new(cfg: AltCfg, tx: Sender<KtrlIpcReq>, rx: Receiver<AltEvent>) -> Self {
+        let aggs: Vec<AndAgg> = cfg.aggs.iter()
+            .map(|agg| {
+                AndAgg::new(agg.requirements.clone(),
+                            agg.on_ipc.clone(),
+                            agg.off_ipc.clone())
+            }).collect();
 
-        let chrome = AndAgg::new(
-            vec![RqFocus("chrome".to_string()),
-                 ].into_iter().collect(),
-            "TurnOnLayerAlias(\"caps\")".to_string(),
-            "TurnOffLayerAlias(\"caps\")".to_string()
-        );
-
-        let aggs = vec![ivy, chrome];
         Self{tx, rx, aggs}
     }
 

@@ -5,12 +5,14 @@ mod gateway;
 mod i3_focus;
 mod aggregator;
 mod ktrl_client;
+mod config;
 
 use error::DynError;
 use gateway::EvGateway;
 use i3_focus::I3FocusListener;
 use aggregator::EvAggregator;
 use ktrl_client::KtrlClient;
+use config::AltCfg;
 
 use tokio::sync::mpsc;
 
@@ -23,7 +25,7 @@ use std::io::{Error, ErrorKind::*};
 use std::path::{Path, PathBuf};
 
 const DEFAULT_LOG_PATH: &str = ".alt.log";
-const DEFAULT_CFG_PATH: &str = ".alt";
+const DEFAULT_CFG_PATH: &str = ".alt.ron";
 
 struct AltArgs {
     config_path: PathBuf,
@@ -105,6 +107,8 @@ fn cli_init() -> Result<AltArgs, std::io::Error> {
 #[tokio::main]
 async fn main() -> Result<(), DynError> {
     let args = cli_init()?;
+    let cfg = AltCfg::parse(&args.config_path)?;
+
     info!("ALT: Started");
 
     let (agg_tx, agg_rx) = mpsc::channel(1);
@@ -112,7 +116,7 @@ async fn main() -> Result<(), DynError> {
 
     let gateway = EvGateway::new(agg_tx.clone()).await?;
     let mut i3listener = I3FocusListener::new(agg_tx);
-    let mut aggregator = EvAggregator::new(ktrl_tx, agg_rx);
+    let mut aggregator = EvAggregator::new(cfg, ktrl_tx, agg_rx);
     let client = KtrlClient::new(ktrl_rx).await?;
 
     let (gateway_result, i3_res, agg_res, client_res) =

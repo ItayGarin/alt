@@ -1,13 +1,10 @@
-mod error;
 mod events;
-
 mod gateway;
 mod i3_focus;
 mod aggregator;
 mod ktrl_client;
 mod config;
 
-use error::DynError;
 use gateway::EvGateway;
 use i3_focus::I3FocusListener;
 use aggregator::EvAggregator;
@@ -16,12 +13,12 @@ use config::AltCfg;
 
 use tokio::sync::mpsc;
 
+use anyhow::Result;
 use dirs::home_dir;
 use clap::{App, Arg};
 use log::info;
 use simplelog::*;
 use std::fs::File;
-use std::io::{Error, ErrorKind::*};
 use std::path::{Path, PathBuf};
 
 const DEFAULT_LOG_PATH: &str = ".alt.log";
@@ -31,7 +28,7 @@ struct AltArgs {
     config_path: PathBuf,
 }
 
-fn cli_init() -> Result<AltArgs, std::io::Error> {
+fn cli_init() -> Result<AltArgs> {
     let matches = App::new("alt")
         .version("0.1")
         .author("Itay G. <thifixp@gmail.com>")
@@ -95,7 +92,7 @@ fn cli_init() -> Result<AltArgs, std::io::Error> {
             "Could not find your config file ({})",
             config_path.to_str().unwrap_or("?")
         );
-        return Err(Error::new(NotFound, err));
+        anyhow::bail!(err);
     }
 
     Ok(
@@ -105,7 +102,7 @@ fn cli_init() -> Result<AltArgs, std::io::Error> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), DynError> {
+async fn main() -> Result<()> {
     let args = cli_init()?;
     let cfg = AltCfg::parse(&args.config_path)?;
 

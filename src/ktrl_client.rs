@@ -1,4 +1,4 @@
-use crate::error::DynError;
+use anyhow::Result;
 use tokio::sync::mpsc;
 use log::info;
 
@@ -9,11 +9,11 @@ pub struct KtrlClient {
 }
 
 impl KtrlClient {
-    pub async fn new(rx: mpsc::Receiver<KtrlIpcReq>) -> Result<Self, DynError> {
+    pub async fn new(rx: mpsc::Receiver<KtrlIpcReq>) -> Result<Self> {
         Ok(Self { rx })
     }
 
-    pub async fn event_loop(mut self) -> Result<(), DynError> {
+    pub async fn event_loop(mut self) -> Result<()> {
         let context = tmq::Context::new();
         let mut ktrl_sender = tmq::request(&context).connect("tcp://127.0.0.1:7331")?;
         info!("Connected to ktrl");

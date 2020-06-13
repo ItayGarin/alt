@@ -1,4 +1,3 @@
-use std::io;
 use std::net::Ipv4Addr;
 use std::net::SocketAddrV4;
 use tokio::io::AsyncReadExt;
@@ -10,7 +9,7 @@ use tokio::sync::mpsc::Sender;
 use std::sync::Arc;
 use log::{info, error};
 
-use crate::error::DynError;
+use anyhow::Result;
 use crate::events::*;
 
 pub struct EvGateway {
@@ -20,34 +19,29 @@ pub struct EvGateway {
 type ArcEvGateway = Arc<Mutex<EvGateway>>;
 
 impl EvGateway {
-    pub async fn new(tx: Sender<AltEvent>) -> Result<Self, DynError> {
+    pub async fn new(tx: Sender<AltEvent>) -> Result<Self> {
         Ok(Self { tx })
     }
 
-    async fn init_listen_socket() -> Result<TcpListener, DynError> {
+    async fn init_listen_socket() -> Result<TcpListener> {
         let endpoint = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 7332);
         let listen_socket = TcpListener::bind(endpoint).await?;
         Ok(listen_socket)
     }
 
-    async fn handle_event(gateway: &mut ArcEvGateway, event: ExtEvent) -> Result<(), DynError> {
+    async fn handle_event(gateway: &mut ArcEvGateway, event: ExtEvent) -> Result<()> {
         let mut gateway = gateway.lock().await;
         let event = AltEvent::AltExtEvent(event);
         gateway.tx.send(event).await?;
         Ok(())
     }
 
-    async fn handle_buf(gateway: &mut ArcEvGateway, buf: &[u8]) -> Result<(), DynError> {
+    async fn handle_buf(gateway: &mut ArcEvGateway, buf: &[u8]) -> Result<()> {
         let str_buf = std::str::from_utf8(buf)?;
         let split: Vec<&str> = str_buf.split(":").collect();
 
-        if split.len() != 2 {
-            let err = Box::new(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Bad event (should be <name>:<on/off>)",
-            ));
-            return Err(err);
-        }
+        anyhow::ensure!(split.len() == 2,
+                       "Bad event (should be <name>:<on/off>)");
 
         let name = split[0].trim().to_string();
         let state = ExtEventState::from_str(split[1].trim())?;
@@ -94,7 +88,7 @@ impl EvGateway {
         }
     }
 
-    pub async fn event_loop(self) -> Result<(), DynError> {
+    pub async fn event_loop(self) -> Result<()> {
         let mut listen_socket = Self::init_listen_socket().await?;
         let arc_gateway = Arc::new(Mutex::new(self));
         loop {

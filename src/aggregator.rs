@@ -5,7 +5,7 @@ use crate::events::ExtEventState;
 use crate::events::AltEvent;
 use crate::events::AltEvent::*;
 use crate::ktrl_client::KtrlIpcReq;
-use crate::error::DynError;
+use anyhow::Result;
 use crate::config::{AltCfg, Requirement, Requirement::*};
 
 #[derive(Debug)]
@@ -64,13 +64,13 @@ impl EvAggregator {
         Self{tx, rx, aggs}
     }
 
-    async fn send_effect(&mut self, req: KtrlIpcReq) -> Result<(), DynError> {
+    async fn send_effect(&mut self, req: KtrlIpcReq) -> Result<()> {
         let effect = format!("IpcDoEffect((fx: {}, val: Press))", req);
         self.tx.send(effect).await?;
         Ok(())
     }
 
-    async fn handle_event(&mut self, event: AltEvent) -> Result<(), DynError> {
+    async fn handle_event(&mut self, event: AltEvent) -> Result<()> {
         for agg in &mut self.aggs {
             for requirement in &agg.cfg {
                 match (requirement, &event) {
@@ -121,7 +121,7 @@ impl EvAggregator {
         Ok(())
     }
 
-    pub async fn event_loop(&mut self) -> Result<(), DynError> {
+    pub async fn event_loop(&mut self) -> Result<()> {
 
         loop {
             let event = self.rx.recv().await.unwrap();

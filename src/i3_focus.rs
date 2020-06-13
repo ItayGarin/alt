@@ -2,7 +2,7 @@ use tokio_i3ipc::{event::{Event,Subscribe, WindowData, WindowChange}, I3};
 use tokio::stream::StreamExt;
 use tokio::sync::mpsc::Sender;
 
-use crate::error::DynError;
+use anyhow::Result;
 use crate::events::*;
 
 pub struct I3FocusListener {
@@ -14,7 +14,7 @@ impl I3FocusListener {
         Self{tx}
     }
 
-    async fn handle_window_event(&mut self, data: Box<WindowData>) -> Result<(), DynError> {
+    async fn handle_window_event(&mut self, data: Box<WindowData>) -> Result<()> {
         if let WindowChange::Focus = data.change {
             let window = match data.container.name {
                 Some(name) => name,
@@ -29,7 +29,7 @@ impl I3FocusListener {
         Ok(())
     }
 
-    pub async fn event_loop(&mut self) -> Result<(), DynError> {
+    pub async fn event_loop(&mut self) -> Result<()> {
         let mut i3 = I3::connect().await?;
         i3.subscribe([Subscribe::Window]).await?;
 
